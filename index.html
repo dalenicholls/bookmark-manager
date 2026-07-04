@@ -1079,7 +1079,7 @@
       + "var og=document.querySelector('meta[property=\"og:image\"]');"
       + "d.thumbnail=og?og.content:(location.origin+'/favicon.ico');"
       + "var t=" + JSON.stringify(target) + ";"
-      + "window.open(t+'#add='+encodeURIComponent(JSON.stringify(d)),'_blank');"
+      + "window.open(t+'#add='+encodeURIComponent(JSON.stringify(d)),'bookmarkManagerTab');"
       + "})();";
     document.getElementById("dragBookmarklet").setAttribute("href", code);
     document.getElementById("bkCode").value = code;
