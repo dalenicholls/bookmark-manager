@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Markdown Viewer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --panel: #ffffff;
+    --text: #2b2a28;
+    --muted: #8a877f;
+    --accent: #b5651d;
+    --border: #e5e2da;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    padding: 16px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  #filename {
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #fileInput { display: none; }
+  .btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .btn:hover { opacity: 0.9; }
+  main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  #dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  #dropzone.dragover {
+    border-color: var(--accent);
+    background: #fdf6ee;
+  }
+  #content {
+    display: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 40px 48px;
+    line-height: 1.65;
+  }
+  #content h1, #content h2, #content h3 { line-height: 1.3; }
+  #content h1 { font-size: 1.9em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  #content h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  #content code {
+    background: #f0eee8;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  #content pre {
+    background: #2b2a28;
+    color: #f0eee8;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  #content pre code { background: none; padding: 0; color: inherit; }
+  #content blockquote {
+    border-left: 3px solid var(--accent);
+    margin: 0;
+    padding: 4px 16px;
+    color: var(--muted);
+  }
+  #content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+  }
+  #content th, #content td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  #content img { max-width: 100%; }
+  #content a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Markdown Viewer</h1>
+  <span id="filename">No file loaded</span>
+  <button class="btn" onclick="document.getElementById('fileInput').click()">Open .md file</button>
+  <input type="file" id="fileInput" accept=".md,.markdown,text/markdown,text/plain">
+</header>
+
+<main>
+  <div id="dropzone" onclick="document.getElementById('fileInput').click()">
+    Drop a Markdown file here, or click to browse
+  </div>
+  <div id="content"></div>
+</main>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropzone = document.getElementById('dropzone');
+const content = document.getElementById('content');
+const filenameLabel = document.getElementById('filename');
+
+function renderMarkdown(text, name) {
+  content.innerHTML = marked.parse(text);
+  content.style.display = 'block';
+  dropzone.style.display = 'none';
+  filenameLabel.textContent = name;
+}
+
+function loadFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => renderMarkdown(e.target.result, file.name);
+  reader.readAsText(file);
+}
+
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+['dragenter', 'dragover'].forEach(evt =>
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  })
+);
+['dragleave', 'drop'].forEach(evt =>
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+  })
+);
+dropzone.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+</script>
+
+</body>
+</html>
