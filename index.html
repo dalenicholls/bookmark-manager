@@ -844,6 +844,11 @@
 
   function closeEditModal(){
     editOverlay.classList.add("hidden");
+    if(bookmarkletReturnUrl){
+      var ret = bookmarkletReturnUrl;
+      bookmarkletReturnUrl = null;
+      setTimeout(function(){ location.href = ret; }, 350);
+    }
   }
 
   document.getElementById("cancelEdit").onclick = closeEditModal;
@@ -1079,17 +1084,20 @@
       + "var og=document.querySelector('meta[property=\"og:image\"]');"
       + "d.thumbnail=og?og.content:(location.origin+'/favicon.ico');"
       + "var t=" + JSON.stringify(target) + ";"
-      + "window.open(t+'#add='+encodeURIComponent(JSON.stringify(d)),'bookmarkManagerTab');"
+      + "location.href=t+'#add='+encodeURIComponent(JSON.stringify(d));"
       + "})();";
     document.getElementById("dragBookmarklet").setAttribute("href", code);
     document.getElementById("bkCode").value = code;
   }
+
+  var bookmarkletReturnUrl = null;
 
   function checkIncomingBookmarklet(){
     var hash = window.location.hash;
     if(hash && hash.indexOf("#add=") === 0){
       try{
         var data = JSON.parse(decodeURIComponent(hash.slice(5)));
+        bookmarkletReturnUrl = data.url || null;
         openAddModal(data);
       }catch(e){ /* ignore malformed */ }
       history.replaceState(null, "", window.location.pathname + window.location.search);
