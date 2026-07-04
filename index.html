@@ -140,6 +140,14 @@
     cursor: pointer;
   }
   .tagPill.active{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .collectionPill{
+    font-family: var(--mono); font-size: 9px;
+    background: #EFEAF6; border: 1px solid #D8CCEC;
+    color: var(--tab-4);
+    border-radius: 20px; padding: 2px 7px;
+    cursor: pointer;
+  }
+  .collectionPill.active{ background: var(--tab-4); color: #fff; border-color: var(--tab-4); }
 
   .cardActions{
     display:flex; justify-content:flex-end; gap:2px;
@@ -278,7 +286,7 @@
     <span class="count" id="countLabel">0 items</span>
   </div>
   <div class="searchRow">
-    <input type="search" id="searchInput" placeholder="Search title or tags…">
+    <input type="search" id="searchInput" placeholder="Search title, tags or collections…">
     <button class="iconBtn" id="importBtn" title="Import JSON">&#8593;</button>
     <button class="iconBtn" id="exportBtn" title="Export JSON">&#8595;</button>
   </div>
@@ -298,6 +306,11 @@
   <details class="bkSection" id="tagsSection">
     <summary>Tags</summary>
     <div class="bkBody" id="tagsList"></div>
+  </details>
+
+  <details class="bkSection" id="collectionsSection">
+    <summary>Collections</summary>
+    <div class="bkBody" id="collectionsList"></div>
   </details>
 
   <div class="grid hidden" id="grid"></div>
@@ -354,6 +367,10 @@
       <label for="fTags">Tags (comma separated)</label>
       <input type="text" id="fTags" placeholder="reference, drafting, site-photos">
     </div>
+    <div class="field">
+      <label for="fCollections">Collections (comma separated)</label>
+      <input type="text" id="fCollections" placeholder="current jobs, read later">
+    </div>
     <div class="modalActions">
       <button class="btn secondary" id="cancelEdit">Cancel</button>
       <button class="btn" id="saveEdit">Save</button>
@@ -391,7 +408,7 @@
 (function(){
   "use strict";
   var STORAGE_KEY = "bookmarkManagerData_v1";
-  var state = { items: [], searchQuery: "", activeTags: [], sort: "date-desc", selectMode: false, selectedIds: [] };
+  var state = { items: [], searchQuery: "", activeTags: [], activeCollections: [], sort: "date-desc", selectMode: false, selectedIds: [] };
 
   // ---------- storage ----------
   function load(){
@@ -478,10 +495,16 @@
         var hasAll = state.activeTags.every(function(t){ return itemTags.indexOf(t) !== -1; });
         if(!hasAll) return false;
       }
+      if(state.activeCollections.length){
+        var itemCollections = it.collections || [];
+        var hasAllC = state.activeCollections.every(function(c){ return itemCollections.indexOf(c) !== -1; });
+        if(!hasAllC) return false;
+      }
       if(!q) return true;
       var inTitle = (it.title || "").toLowerCase().indexOf(q) !== -1;
       var inTags = (it.tags || []).some(function(t){ return t.toLowerCase().indexOf(q) !== -1; });
-      return inTitle || inTags;
+      var inCollections = (it.collections || []).some(function(c){ return c.toLowerCase().indexOf(q) !== -1; });
+      return inTitle || inTags || inCollections;
     });
     items.sort(function(a,b){
       switch(state.sort){
@@ -497,6 +520,7 @@
 
   function render(){
     renderTagsList();
+    renderCollectionsList();
 
     var selectBtn = document.getElementById("selectModeBtn");
     var selectBar = document.getElementById("selectBar");
@@ -523,6 +547,17 @@
       var clearBtn = document.createElement("button");
       clearBtn.textContent = "×";
       clearBtn.onclick = function(){ toggleTag(t); };
+      chip.appendChild(clearBtn);
+      activeTagChip.appendChild(chip);
+    });
+    state.activeCollections.forEach(function(c){
+      var chip = document.createElement("span");
+      chip.className = "activeTag";
+      chip.style.background = "var(--tab-4)";
+      chip.innerHTML = "@" + escapeHtml(c) + " ";
+      var clearBtn = document.createElement("button");
+      clearBtn.textContent = "×";
+      clearBtn.onclick = function(){ toggleCollection(c); };
       chip.appendChild(clearBtn);
       activeTagChip.appendChild(chip);
     });
@@ -581,6 +616,41 @@
       pill.className = "tagPill" + (state.activeTags.indexOf(t) !== -1 ? " active" : "");
       pill.textContent = "#" + t;
       pill.onclick = function(){ toggleTag(t); };
+      wrap.appendChild(pill);
+    });
+    container.appendChild(wrap);
+  }
+
+  function toggleCollection(c){
+    var idx = state.activeCollections.indexOf(c);
+    if(idx === -1) state.activeCollections.push(c); else state.activeCollections.splice(idx,1);
+    render();
+  }
+
+  function getAllCollections(){
+    var set = {};
+    state.items.forEach(function(it){
+      (it.collections || []).forEach(function(c){ set[c] = true; });
+    });
+    return Object.keys(set).sort(function(a,b){ return a.localeCompare(b); });
+  }
+
+  function renderCollectionsList(){
+    var container = document.getElementById("collectionsList");
+    if(!container) return;
+    container.innerHTML = "";
+    var collections = getAllCollections();
+    if(!collections.length){
+      container.textContent = "No collections yet.";
+      return;
+    }
+    var wrap = document.createElement("div");
+    wrap.className = "tags";
+    collections.forEach(function(c){
+      var pill = document.createElement("span");
+      pill.className = "collectionPill" + (state.activeCollections.indexOf(c) !== -1 ? " active" : "");
+      pill.textContent = "@" + c;
+      pill.onclick = function(){ toggleCollection(c); };
       wrap.appendChild(pill);
     });
     container.appendChild(wrap);
@@ -673,6 +743,19 @@
       body.appendChild(tagsWrap);
     }
 
+    if(item.collections && item.collections.length){
+      var collectionsWrap = document.createElement("div");
+      collectionsWrap.className = "tags";
+      item.collections.forEach(function(c){
+        var pill = document.createElement("span");
+        pill.className = "collectionPill" + (state.activeCollections.indexOf(c) !== -1 ? " active" : "");
+        pill.textContent = "@" + c;
+        pill.onclick = function(){ toggleCollection(c); };
+        collectionsWrap.appendChild(pill);
+      });
+      body.appendChild(collectionsWrap);
+    }
+
     card.appendChild(body);
 
     if(!state.selectMode){
@@ -713,6 +796,7 @@
   var fUrl = document.getElementById("fUrl");
   var fThumb = document.getElementById("fThumb");
   var fTags = document.getElementById("fTags");
+  var fCollections = document.getElementById("fCollections");
   var thumbPreview = document.getElementById("thumbPreview");
   var editingId = null;
 
@@ -737,6 +821,7 @@
     fUrl.value = (prefill && prefill.url) || "";
     fThumb.value = (prefill && prefill.thumbnail) || "";
     fTags.value = "";
+    fCollections.value = "";
     updateThumbPreview();
     editOverlay.classList.remove("hidden");
     setTimeout(function(){ fTitle.focus(); }, 50);
@@ -751,6 +836,7 @@
     fUrl.value = item.url || "";
     fThumb.value = item.thumbnail || "";
     fTags.value = (item.tags || []).join(", ");
+    fCollections.value = (item.collections || []).join(", ");
     updateThumbPreview();
     editOverlay.classList.remove("hidden");
     setTimeout(function(){ fTitle.focus(); }, 50);
@@ -774,6 +860,7 @@
       return;
     }
     var tags = fTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean);
+    var collections = fCollections.value.split(",").map(function(c){ return c.trim(); }).filter(Boolean);
     var thumbnail = fThumb.value.trim();
 
     if(editingId){
@@ -782,6 +869,7 @@
       item.url = url;
       item.thumbnail = thumbnail;
       item.tags = tags;
+      item.collections = collections;
       item.dateModified = nowIso();
       toast("Saved");
     } else {
@@ -792,6 +880,7 @@
         url: url,
         thumbnail: thumbnail,
         tags: tags,
+        collections: collections,
         dateAdded: now,
         dateModified: now
       });
@@ -917,6 +1006,7 @@
           url: raw.url || "",
           thumbnail: raw.thumbnail || "",
           tags: Array.isArray(raw.tags) ? raw.tags : [],
+          collections: Array.isArray(raw.collections) ? raw.collections : [],
           dateAdded: raw.dateAdded || now,
           dateModified: raw.dateModified || raw.dateAdded || now
         };
