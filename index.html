@@ -845,9 +845,12 @@
   function closeEditModal(){
     editOverlay.classList.add("hidden");
     if(bookmarkletReturnUrl){
-      var ret = bookmarkletReturnUrl;
       bookmarkletReturnUrl = null;
-      setTimeout(function(){ location.href = ret; }, 350);
+      setTimeout(function(){
+        window.close();
+        // if window.close() is blocked (tab wasn't opened by script), this is a no-op
+        // and the user is simply left on the app — no redirect, no duplicate tab.
+      }, 350);
     }
   }
 
